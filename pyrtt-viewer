@@ -24,12 +24,13 @@
 import sys
 import time
 import threading
-from datetime import datetime
+import datetime
 import logging
 import argparse
 
 try:
     from pynrfjprog import HighLevel
+    from pynrfjprog import APIError
 except ImportError:
     print("Error: Could not find pynrfjprog.\nHave you run `pip install pynrfjprog`?")
     exit(1)
@@ -38,7 +39,9 @@ except ImportError:
 def get_snr(api):
     devices = api.get_connected_probes()
 
-    if devices and len(devices) > 0:
+    if devices and len(devices) == 1:
+        return devices[0]
+    elif devices and len(devices) > 1:
         device_range = list(range(len(devices)))
         print("Connected devices:")
         print("".join(["%d: %d\n" % (i, devices[i]) for i in device_range]))
@@ -50,6 +53,7 @@ def get_snr(api):
                 if number == "q":
                     return None
                 elif int(number) in device_range:
+                    print('')
                     return devices[int(number)]
             except ValueError:
                 pass
@@ -103,7 +107,7 @@ class RTT(object):
                     continue
                 try:
                     if self._args.timestamp:
-                        now_str = datetime.now().strftime('%Y/%m/%d %H:%M:%S')
+                        now_str = datetime.datetime.now().strftime('%Y/%m/%d %H:%M:%S')
                         s = now_str + ' ' + s
                     sys.stdout.buffer.write(bytes(s, "ascii"))
                 except TypeError:
@@ -157,9 +161,11 @@ def main():
         try:
             rtt.run()
         except KeyboardInterrupt:
-            print("\nExiting...")
+            print("\nExiting...(KeyboardInterrupt)")
             exit(0)
-        rtt.run()
+        except APIError.APIError as e:
+            print(f"\nExiting...(APIError): {e}")
+            exit(0)
 
 
 if __name__ == "__main__":
