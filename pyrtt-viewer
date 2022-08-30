@@ -88,15 +88,29 @@ class RTT(object):
         while not self._close_event.is_set():
             data = sys.stdin.readline().strip("\n")
             if len(data) > 0:
-                self._nrf.rtt_write(self._args.channel, data)
-                # Yield
+                try:
+                    self._nrf.rtt_write(self._args.channel, data)
+                    # Yield
+                except APIError.APIError as e:
+                    print(f"writer thread pynrfjprog.APIError.APIError: {e}")
+                    self._close_event.set()
+                    return
             time.sleep(0.1)
 
     def _reader(self):
         BLOCK_SIZE = 512
         rtt_data = ""
         while not self._close_event.is_set():
-            rtt_data = self._nrf.rtt_read(self._args.channel, BLOCK_SIZE)
+            try:
+                rtt_data = self._nrf.rtt_read(self._args.channel, BLOCK_SIZE)
+            except APIError.APIError as e:
+                print(f"reader thread pynrfjprog.APIError.APIError\n")
+                self._close_event.set()
+
+                time.sleep(0.2)
+                if self._writer_thread.is_alive():
+                    print("Press Enter to exit.")
+                return
 
             if rtt_data == "" or type(rtt_data) == int:
                 time.sleep(0.1)
@@ -135,14 +149,13 @@ class RTT(object):
         self._writer_thread = threading.Thread(target=self._writer)
         self._writer_thread.start()
 
-        try:
-            while self._reader_thread.is_alive() or \
-                  self._writer_thread.is_alive():
-                time.sleep(0.1)
-        except KeyboardInterrupt as e:
-            self._close_event.set()
-            self._reader_thread.join()
-            self._writer_thread.join()
+        while self._reader_thread.is_alive() and \
+              self._writer_thread.is_alive():
+            time.sleep(0.5)
+
+        self._close_event.set()
+        self._reader_thread.join()
+        self._writer_thread.join() # sys.stdin.readline will not return
 
 
 def main():
