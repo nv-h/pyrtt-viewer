@@ -111,6 +111,10 @@ class RTT(object):
                 if self._writer_thread.is_alive():
                     print("Press Enter to exit.")
                 return
+            except UnicodeDecodeError as e:
+                print(f"reader thread UnicodeDecodeError: {e}")
+                time.sleep(0.1)
+                continue
 
             if rtt_data == "" or type(rtt_data) == int:
                 time.sleep(0.1)
