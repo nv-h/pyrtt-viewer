@@ -125,7 +125,7 @@ class RTT(object):
                     continue
                 try:
                     if self._args.timestamp:
-                        now_str = datetime.datetime.now().strftime('%Y/%m/%d %H:%M:%S')
+                        now_str = datetime.datetime.now().strftime('%Y/%m/%d %H:%M:%S.%f')
                         s = now_str + ' ' + s
                     sys.stdout.buffer.write(bytes(s, "ascii"))
                 except TypeError:
